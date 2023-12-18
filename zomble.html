@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    .container {
+      width: 1040px;
+      height: 720px;
+      margin: auto;
+      text-align: center;
+      border: 1px solid #333;
+      padding: 40px;
+      background: lightgoldenrodyellow;
+
+    }
+
+    #game {
+      width: 700px;
+      height: 700px;
+      border: 1px solid black;
+      background-image: url('./images/06.road.png');
+      background-size: cover;
+      position: relative;
+      overflow: hidden;
+      cursor: url(./images/04.hand.png), auto;
+      float: left;
+    }
+
+    #man {
+      width: 200px;
+      height: 400px;
+      position: absolute;
+      top: 44%;
+      left: 37%;
+    }
+
+    #right {
+      width: 300px;
+      height: 700px;
+      float: right;
+      background: lightcyan;
+    }
+
+    #game>img:not(#man) {
+      height: 50px;
+      position: absolute;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .hit {
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div id="game">
+      <img src="./images/01.man.png" id="man">
+    </div>
+    <div id="right">
+      <input type="button" value="開始" id="btn-start">
+      <p>分數:<span id="text-score">0</span></p>
+      <p>剩餘:<span id="text-time">0</span>秒</p>
+      <p>最高分秘書:<span id="text-hsname">-</span></p>
+      <p>最高分分數:<span id="text-hsscore"></span></p>
+      <p>遊戲簡介:你是一名候選人的秘書，你必須保護候選人在演講過程中不會遭受過度的攻擊</p>
+      <p>雞蛋:1分</p>
+      <p>高麗菜:2分</p>
+      <p>日本酒:5分</p>
+      <p>注意:酒不能碰到候選人，候選人有台前喝酒的可能</p>
+    </div>
+  </div>
+
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.7.32/sweetalert2.all.min.js'></script>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js'></script>
+  <script>
+    let score = 0
+    let time = 0
+    let timer = 0
+    const hs = {
+      name: '-',
+      score: 0
+    }
+    if (localStorage.hs) {
+      const data = JSON.parse(localStorage.hs)
+      hs.name = data.name
+      hs.score = data.score
+      $('#text-hsname').text(hs.name)
+      $('#text-hsscore').text(hs.score)
+    }
+
+    $('#btn-start').click(function () {
+      $('#game').append('<img src="./images/01.man.png" id="man">');
+      $('#man').css({ top: '44%', left: '37%' });
+      $(this).attr('disabled', true)
+      score = 0
+      $('#text-score').text(score)
+      time = 10
+      $('#text-time').text(time)
+      const _this = this
+      timer = setInterval(function () {
+        time--
+        $('#text-time').text(time)
+        const random = Math.ceil(Math.random() * 10)
+        if (random > 5 && $('.egg').length < 5) {
+          const top = Math.round(Math.random() * 100) + '%'
+          const left = Math.round(Math.random() * 100) + '%'
+          const egg = $(`<img src="./images/02.egg.png" class="egg" style="top: ${top}; left: ${left}">`)
+          $('#game').append(egg)
+          moveEgg(egg)
+        }
+        if (random > 3 && $('.vegatable').length < 3) {
+          const top = Math.round(Math.random() * 100) + '%'
+          const left = Math.round(Math.random() * 100) + '%'
+          const vegatable = $(`<img src="./images/03.vegatable.png" class="vegatable" style="top: ${top}; left: ${left}">`)
+          $('#game').append(vegatable)
+          moveVegatable(vegatable)
+        }
+        if (random > 1 && $('.osake').length < 1) {
+          const top = Math.round(Math.random() * 100) + '%'
+          const left = Math.round(Math.random() * 100) + '%'
+          const osake = $(`<img src="./images/07.osake.png" class="osake" style="top: ${top}; left: ${left}">`)
+          $('#game').append(osake)
+          moveOsake(osake)
+        }
+        if (isCollision($('#man'), $('.osake'))) {
+          clearInterval(timer);
+          $(_this).attr('disabled', false)
+          $('#game').empty();
+          Swal.fire({
+            icon: 'info',
+            title: '候選人在台上喝了酒，醜態百出，你被辭退了',
+            text: `你得到 ${score} 分`
+          })
+        }
+        if (time === 0) {
+          clearInterval(timer)
+          $(_this).attr('disabled', false)
+          $('#game').empty()
+
+          if (score > hs.score) {
+            Swal.fire({
+              icon: 'success',
+              title: '演講結束',
+              text: `最高分，你出色的保護了候選人，得到 ${score} 分`,
+              input: 'text',
+              inputAttributes: {
+                required: true
+              },
+              inputPlaceholder: '請輸入你的名字',
+              validationMessage: '請輸入你的名字',
+              allowOutsideClick: false,
+              allowEscapeKey: false
+            }).then(function (result) {
+              hs.score = score
+              hs.name = result.value
+              $('#text-hsname').text(hs.name)
+              $('#text-hsscore').text(hs.score)
+              localStorage.hs = JSON.stringify(hs)
+            })
+          } else {
+            Swal.fire({
+              icon: 'info',
+              title: '演講結束',
+              text: `拿多少做多少，得到 ${score} 分`
+            })
+          }
+        }
+      }, 1000)
+    })
+
+    $('#game').on('click', '.egg', function () {
+      let $egg = $(this);
+      $egg.stop();
+      $egg.attr('src', './images/05.hit.png')
+      $egg.removeClass('egg').addClass('hit')
+      score++
+      $('#text-score').text(score)
+      setTimeout(function () {
+        $egg.fadeOut(300, function () {
+          $egg.removeClass('hit');
+        });
+      }, 1000);
+    });
+
+    $('#game').on('click', '.vegatable', function () {
+      let $vegatable = $(this);
+      $vegatable.stop();
+      $vegatable.attr('src', './images/05.hit.png')
+      $vegatable.removeClass('vegatable').addClass('hit')
+      score += 2
+      $('#text-score').text(score)
+      setTimeout(function () {
+        $vegatable.fadeOut(300, function () {
+          $vegatable.removeClass('hit');
+        });
+      }, 1000);
+    });
+
+    $('#game').on('click', '.osake', function () {
+      let $osake = $(this);
+      $osake.stop();
+      $osake.attr('src', './images/05.hit.png')
+      $osake.removeClass('osake').addClass('hit')
+      score += 5
+      $('#text-score').text(score)
+      setTimeout(function () {
+        $osake.fadeOut(300, function () {
+          $osake.removeClass('hit');
+        });
+      }, 1000);
+    });
+
+
+
+
+    function moveEgg(egg) {
+      const top = Math.round(Math.random() * 100) + '%'
+      const left = Math.round(Math.random() * 100) + '%'
+      egg.animate({ top, left }, 3000, function () {
+        moveEgg(egg)
+      })
+    }
+
+    function moveVegatable(vegatable) {
+      const top = Math.round(Math.random() * 100) + '%'
+      const left = Math.round(Math.random() * 100) + '%'
+      vegatable.animate({ top, left }, 2000, function () {
+        moveVegatable(vegatable)
+      })
+    }
+
+    function moveOsake(osake) {
+      const top = Math.round(Math.random() * 100) + '%'
+      const left = Math.round(Math.random() * 100) + '%'
+      osake.animate({ top, left }, 5000, function () {
+        moveOsake(osake);
+      })
+    }
+
+    function isCollision($man, $osake) {
+      let manOffset = $man.offset();
+      let osakeOffset = $osake.offset();
+      return (
+        manOffset.left < osakeOffset.left + $osake.width() &&
+        manOffset.left + $man.width() > osakeOffset.left &&
+        manOffset.top < osakeOffset.top + $osake.height() &&
+        manOffset.top + $man.height() > osakeOffset.top
+      );
+    }
+  </script>
+</body>
+
+</html>
